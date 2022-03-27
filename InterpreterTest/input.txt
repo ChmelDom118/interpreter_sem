@@ -1,0 +1,16 @@
+﻿declare:
+ function factorial(integer a) -> integer
+  integer result = 0;
+  if a > 1 then
+   result = a * execute factorial(a - 1);
+  else
+   result = 1;
+  end; 
+  return result;
+ end;
+begin:
+ for i = 1; i <= 10; i = i + 1; do
+  integer f = execute factorial(i);
+  execute print(f);
+ end;
+end;
