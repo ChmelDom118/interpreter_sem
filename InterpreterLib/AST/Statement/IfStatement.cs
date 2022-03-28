@@ -4,13 +4,15 @@
     {
         public Condition Condition { get; private set; }
         public Block Block { get; private set; }
-        public IfStatement ElseStatement { get; private set; }
+        public List<Tuple<Condition, Block>> ElseIfBranches { get; private set; }
+        public Block? ElseBranch { get; private set; }
 
-        public IfStatement(Condition condition, Block block, IfStatement elseStatement)
+        public IfStatement(Condition condition, Block block, List<Tuple<Condition, Block>> elseIfBranches, Block? elseBranch)
         {
             Condition = condition;
             Block = block;
-            ElseStatement = elseStatement;
+            ElseIfBranches = elseIfBranches;
+            ElseBranch = elseBranch;
         }
     }
 }

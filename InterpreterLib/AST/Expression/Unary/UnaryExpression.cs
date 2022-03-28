@@ -1,6 +1,6 @@
 ﻿namespace InterpreterLib.AST
 {
-    public class UnaryExpression
+    public class UnaryExpression : Expression
     {
         protected Expression expression;
 

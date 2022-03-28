@@ -1,6 +1,6 @@
 ﻿namespace InterpreterLib.AST
 {
-    public abstract class LiteralExpression<T>
+    public abstract class LiteralExpression<T> : Expression
     {
         public T Value { get; protected set; }
 

@@ -1,6 +1,6 @@
 ﻿namespace InterpreterLib.AST
 {
-    public class BinaryExpression
+    public class BinaryExpression : Expression
     {
         protected Expression left;
         protected Expression right;

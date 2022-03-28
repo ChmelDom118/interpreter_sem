@@ -3,9 +3,13 @@
   integer result = 0;
   if a > 1 then
    result = a * execute factorial(a - 1);
+  elseif a == 2 then
+   integer r = pi * pi / (execute pow(a) + c);
+  elseif a <= 10 * 6 then
   else
    result = 1;
-  end; 
+   boolean b = true;
+  end;
   return result;
  end;
 begin:
@@ -13,4 +17,7 @@ begin:
   integer f = execute factorial(i);
   execute print(f);
  end;
+ while running do
+ end;
+ repeat integer a = 10; until a < 10 + b * execute c() end;
 end;

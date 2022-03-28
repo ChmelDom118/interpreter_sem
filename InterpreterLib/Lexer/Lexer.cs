@@ -85,7 +85,9 @@
                             case "integer":
                             case "double":
                             case "string":
-                            case "bool": AddToken(TokenType.Datatype); break;
+                            case "boolean": AddToken(TokenType.Datatype); break;
+                            case "true":
+                            case "false": AddToken(TokenType.Literal); break;
                             default: AddToken(TokenType.Identifier); break;
                         }
                     }

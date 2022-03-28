@@ -1,5 +1,5 @@
-﻿using InterpreterLib.Lexer;
-using InterpreterLib.AST;
+﻿using InterpreterLib.AST;
+using InterpreterLib.Lexer;
 
 namespace InterpreterLib.Parser
 {
@@ -20,9 +20,13 @@ namespace InterpreterLib.Parser
 
             if (Match(Tuple.Create(TokenType.Keyword, "declare")))
             {
+                Consume(TokenType.Keyword, "declare");
                 Consume(TokenType.Colon);
                 functions = ReadFunctionDefinitions();
             }
+
+            Consume(TokenType.Keyword, "begin");
+            Consume(TokenType.Colon);
 
             Block block = ReadBlock();
 
@@ -36,12 +40,15 @@ namespace InterpreterLib.Parser
         {
             Block block = new Block();
 
-            Token token = PeekToken();
-
-            while (Match(TokenType.Keyword, TokenType.Identifier, TokenType.Datatype))
+            while (Match(TokenType.Identifier, TokenType.Datatype)
+                || Match(Tuple.Create(TokenType.Keyword, "for"))
+                || Match(Tuple.Create(TokenType.Keyword, "while"))
+                || Match(Tuple.Create(TokenType.Keyword, "repeat"))
+                || Match(Tuple.Create(TokenType.Keyword, "if"))
+                || Match(Tuple.Create(TokenType.Keyword, "execute"))
+                )
             {
                 block.AddStatements(ReadStatement());
-                token = PeekToken();
             }
 
             return block;
@@ -53,12 +60,9 @@ namespace InterpreterLib.Parser
 
             functions.Add(ReadFunctionDefinition());
 
-            Token token = PeekToken();
-
-            while (token.Type == TokenType.Keyword && token.Lexeme == "function")
+            while (Match(Tuple.Create(TokenType.Keyword, "function")))
             {
                 functions.Add(ReadFunctionDefinition());
-                token = PeekToken();
             }
 
             return functions;
@@ -94,7 +98,19 @@ namespace InterpreterLib.Parser
             if (dataType.HasValue)
             {
                 Consume(TokenType.Keyword, "return");
-                ReadCondition() / ReadExpression(); // vytvorit argument (condition / statement)
+                Expression expression = ReadExpression();
+                bool isCondition = Match(
+                    TokenType.EqualsTo,
+                    TokenType.NotEqualsTo,
+                    TokenType.LessThan,
+                    TokenType.LessThanOrEqualTo,
+                    TokenType.GreaterThan,
+                    TokenType.GreaterThanOrEqualTo
+                );
+                Consume(TokenType.Semicolon);
+                returnArgument = isCondition
+                    ? new Argument(ReadCondition(expression))
+                    : new Argument(expression);
             }
 
             Consume(TokenType.Keyword, "end");
@@ -211,12 +227,68 @@ namespace InterpreterLib.Parser
 
         private ForStatement ReadForStatement()
         {
+            Consume(TokenType.Keyword, "for");
+            Token identifierToken = CheckedReadToken(TokenType.Identifier);
+            Consume(TokenType.Assign);
+            Expression initExpression = ReadExpression();
+            Consume(TokenType.Semicolon);
+            Condition condition = ReadCondition();
+            Consume(TokenType.Semicolon);
 
+
+            Token? incrementIdentifierToken = null;
+            Expression? incrementExpression = null;
+            if (Match(TokenType.Identifier))
+            {
+                incrementIdentifierToken = CheckedReadToken(TokenType.Identifier);
+                Consume(TokenType.Assign);
+                incrementExpression = ReadExpression();
+                Consume(TokenType.Semicolon);
+            }
+
+            Consume(TokenType.Keyword, "do");
+            Block block = ReadBlock();
+            Consume(TokenType.Keyword, "end");
+            Consume(TokenType.Semicolon);
+            return new ForStatement(
+                identifierToken.Lexeme, 
+                initExpression, 
+                condition, 
+                incrementIdentifierToken?.Lexeme, 
+                incrementExpression, 
+                block
+            );
         }
 
         private IfStatement ReadIfStatement()
         {
+            Consume(TokenType.Keyword, "if");
+            Condition condition = ReadCondition();
+            Consume(TokenType.Keyword, "then");
+            Block block = ReadBlock();
 
+            List<Tuple<Condition, Block>> elseIfBranches = new List<Tuple<Condition, Block>>();
+
+            while (Match(Tuple.Create(TokenType.Keyword, "elseif")))
+            {
+                Consume(TokenType.Keyword, "elseif");
+                Condition elseIfCondition = ReadCondition();
+                Consume(TokenType.Keyword, "then");
+                Block elseIfBlock = ReadBlock();
+                elseIfBranches.Add(new Tuple<Condition, Block>(elseIfCondition, elseIfBlock));
+            }
+
+            Block? elseBranch = null;
+            if (Match(Tuple.Create(TokenType.Keyword, "else")))
+            {
+                Consume(TokenType.Keyword, "else");
+                elseBranch = ReadBlock();
+            }
+
+            Consume(TokenType.Keyword, "end");
+            Consume(TokenType.Semicolon);
+
+            return new IfStatement(condition, block, elseIfBranches, elseBranch);
         }
 
         private FunctionCallStatement ReadFunctionCallStatement()
@@ -230,11 +302,31 @@ namespace InterpreterLib.Parser
             return new FunctionCallStatement(identifierToken.Lexeme, arguments);
         }
 
+        private FunctionCallExpression ReadFunctionCallExpression()
+        {
+            Consume(TokenType.Keyword, "execute");
+            Token identifierToken = CheckedReadToken(TokenType.Identifier);
+            Consume(TokenType.LeftPaprenthesis);
+            List<Argument> arguments = ReadArguments();
+            Consume(TokenType.RightParenthesis);
+            return new FunctionCallExpression(identifierToken.Lexeme, arguments);
+        }
+
         private AssignStatement ReadAssignStatement()
         {
             if (Match(TokenType.Datatype))
             {
                 Token dataTypeToken = ReadToken();
+                DataType? dataType = null;
+
+                switch (dataTypeToken.Lexeme)
+                {
+                    case "integer": dataType = DataType.Integer; break;
+                    case "double": dataType = DataType.Double; break;
+                    case "string": dataType = DataType.String; break;
+                    case "boolean": dataType = DataType.Boolean; break;
+                }
+
                 Token identifierToken = CheckedReadToken(TokenType.Identifier);
                 if (Match(TokenType.Assign))
                 {
@@ -248,23 +340,194 @@ namespace InterpreterLib.Parser
                         TokenType.GreaterThan,
                         TokenType.GreaterThanOrEqualTo
                     );
-                    return new AssignStatement();
+                    Consume(TokenType.Semicolon);
+                    return isCondition
+                        ? new AssignStatement(dataType, identifierToken.Lexeme, ReadCondition(expression))
+                        : new AssignStatement(dataType, identifierToken.Lexeme, null, expression);
+                }
+                else
+                {
+                    Consume(TokenType.Semicolon);
+                    return new AssignStatement(dataType, identifierToken.Lexeme);
                 }
             }
             else
             {
-
+                Token identifierToken = CheckedReadToken(TokenType.Identifier);
+                Consume(TokenType.Assign);
+                Expression expression = ReadExpression();
+                bool isCondition = Match(
+                    TokenType.EqualsTo,
+                    TokenType.NotEqualsTo,
+                    TokenType.LessThan,
+                    TokenType.LessThanOrEqualTo,
+                    TokenType.GreaterThan,
+                    TokenType.GreaterThanOrEqualTo
+                );
+                Consume(TokenType.Semicolon);
+                return isCondition
+                    ? new AssignStatement(null, identifierToken.Lexeme, ReadCondition(expression))
+                    : new AssignStatement(null, identifierToken.Lexeme, null, expression);
             }
         }
 
-        private Condition ReadCondition(Expression? expression = null)
+        private Condition ReadCondition(Expression? left = null)
         {
+            if (
+                Match(TokenType.Literal, TokenType.Identifier) 
+                && !Match(
+                    1, 
+                    TokenType.EqualsTo,
+                    TokenType.NotEqualsTo, 
+                    TokenType.LessThan, 
+                    TokenType.LessThanOrEqualTo, 
+                    TokenType.GreaterThan, 
+                    TokenType.GreaterThanOrEqualTo
+                    )
+                )
+            {
+                Token token = ReadToken();
 
+                switch (token.Type)
+                { 
+                    case TokenType.Literal:
+                        bool value = false;
+                        switch (token.Lexeme) 
+                        {
+                            case "true":
+                                value = true;
+                                break;
+                            case "false":
+                                value = false;
+                                break;
+                            default:
+                                throw new Exception("Expecting one of following (true, false).");
+                        }
+                        return new LiteralCondition(value);
+                    case TokenType.Identifier:
+                        return new IdentCondition(token.Lexeme);
+                    default:
+                        throw new Exception("Invalid single value condition. Expecting identifier or boolean literal.");
+                }
+            }
+            else
+            {
+                if (left == null) left = ReadExpression();
+                Token opToken = ReadToken();
+                Expression right = ReadExpression();
+
+                return opToken.Type switch
+                {
+                    TokenType.EqualsTo => new EqualsCondition(left, right),
+                    TokenType.NotEqualsTo => new NotEqualsCondition(left, right),
+                    TokenType.LessThan => new LessCondition(left, right),
+                    TokenType.LessThanOrEqualTo => new LessEqualCondition(left, right),
+                    TokenType.GreaterThan => new GreaterCondition(left, right),
+                    TokenType.GreaterThanOrEqualTo => new GreaterEqualCondition(left, right),
+                    _ => throw new Exception("Invalid condition")
+                };
+            }
         }
 
         private Expression ReadExpression()
         {
+            Expression leftExpression;
 
+            if (Match(TokenType.PlusSign))
+            {
+                Consume(TokenType.PlusSign);
+                leftExpression = new PlusUnaryExpression(ReadTerm());
+            }
+            else if (Match(TokenType.PlusSign))
+            {
+                Consume(TokenType.MinusSign);
+                leftExpression = new MinusUnaryExpression(ReadTerm());
+            }
+            else
+            {
+                leftExpression = ReadTerm();
+            }
+
+            while (Match(TokenType.PlusSign, TokenType.MinusSign))
+            {
+                Token operatorToken = ReadToken();
+                Expression rightExpression = ReadTerm();
+
+                switch (operatorToken.Type)
+                {
+                    case TokenType.PlusSign:
+                        leftExpression = new Plus(leftExpression, rightExpression);
+                        break;
+                    case TokenType.MinusSign:
+                        leftExpression = new Minus(leftExpression, rightExpression);
+                        break;
+                }
+            }
+
+            return leftExpression;
+        }
+
+        private Expression ReadTerm()
+        {
+            Expression leftExpression = ReadFactor();
+
+            while (Match(TokenType.MultiplicationSign, TokenType.DivisionSign))
+            {
+                Token operatorToken = ReadToken();
+                Expression rightExpression = ReadFactor();
+
+                switch (operatorToken.Type)
+                {
+                    case TokenType.MultiplicationSign:
+                        leftExpression = new Multiply(leftExpression, rightExpression);
+                        break;
+                    case TokenType.DivisionSign:
+                        leftExpression = new Divide(leftExpression, rightExpression);
+                        break;
+                }
+            }
+
+            return leftExpression;
+        }
+
+        private Expression ReadFactor()
+        {
+            if (Match(TokenType.LeftPaprenthesis))
+            {
+                Consume(TokenType.LeftPaprenthesis);
+                Expression expression = ReadExpression();
+                Consume(TokenType.RightParenthesis);
+                return expression;
+            }
+            else if (Match(Tuple.Create(TokenType.Keyword, "execute")))
+            {
+                return ReadFunctionCallExpression();
+            }
+            else if (Match(TokenType.Identifier))
+            {
+                Token identifierToken = ReadToken();
+                return new IdentExpression(identifierToken.Lexeme);
+            }
+            else if (Match(TokenType.Literal))
+            {
+                Token literalToken = ReadToken();
+
+                double doubleValue;
+                bool success = double.TryParse(literalToken.Lexeme, out doubleValue);
+                if (success) return new DoubleLiteralExpression(doubleValue);
+
+                int integerValue;
+                success = int.TryParse(literalToken.Lexeme, out integerValue);
+                if (success) return new IntegerLiteralExpression(integerValue);
+
+                bool booleanValue;
+                success = bool.TryParse(literalToken.Lexeme, out booleanValue);
+                if (success) return new BoolLiteralExpression(booleanValue);
+
+                return new StringLiteralExpression(literalToken.Lexeme);
+            }
+
+            throw new Exception("Invalid factor.");
         }
 
         private Token PeekToken()
@@ -300,12 +563,24 @@ namespace InterpreterLib.Parser
         private void Consume(TokenType tokenType, string lexeme)
         {
             Token token = ReadToken();
-            if (token.Type != tokenType || token.Lexeme != lexeme) throw new Exception($"Expected \"{tokenType}\" token.");
+            if (token.Type != tokenType || (token.Type == tokenType && token.Lexeme != lexeme)) throw new Exception($"Expected \"{tokenType}\" token.");
         }
 
         private bool Match(params TokenType[] tokenTypes)
         {
             Token token = PeekToken();
+
+            foreach (TokenType tokenType in tokenTypes)
+            {
+                if (tokenType == token.Type) return true;
+            }
+
+            return false;
+        }
+
+        private bool Match(int offset, params TokenType[] tokenTypes)
+        {
+            Token token = _tokens[_pointer + offset];
 
             foreach (TokenType tokenType in tokenTypes)
             {
