@@ -1,5 +1,6 @@
 ﻿declare:
  function factorial(integer a) -> integer
+  string s = "ahoj";
   integer result = 0;
   if a > 1 then
    result = a * execute factorial(a - 1);

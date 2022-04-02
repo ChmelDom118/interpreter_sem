@@ -51,6 +51,11 @@
                 case '(': AddToken(TokenType.LeftPaprenthesis); break;
                 case ')': AddToken(TokenType.RightParenthesis); break;
                 case '\"':
+                    while (!IsNext('\"'))
+                    {
+                        _current++;
+                    }
+                    AddToken(TokenType.Literal);
                     break;
                 case ' ':
                 case '\r':
@@ -117,7 +122,14 @@
 
         private string GetCurrentLexeme()
         {
-            return _input[_start.._current];
+            string lexeme = _input[_start.._current];
+
+            if (lexeme.Contains('\"'))
+            {
+                lexeme = lexeme.Trim('\"');
+            }
+
+            return lexeme;
         }
 
         private void AddToken(TokenType type)
