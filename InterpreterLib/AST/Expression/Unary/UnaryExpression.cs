@@ -1,12 +1,12 @@
 ﻿namespace InterpreterLib.AST
 {
-    public class UnaryExpression : Expression
+    public abstract class UnaryExpression : Expression
     {
-        protected Expression expression;
+        protected Expression Expression;
 
         public UnaryExpression(Expression expression)
         {
-            this.expression = expression;
+            Expression = expression;
         }
     }
 }

@@ -1,0 +1,35 @@
+program = ["declare:" function_definition {function_definition}] "begin:" block "end;" $ ;
+block = {statement ";"} ;
+statement =
+	| "while" condition_head "do" block "end"
+	| "repeat" block "until" condition_head "end"
+	| "for" identifier "=" expression ";" condition ";" [(identifier "=" expression) ";"] "do" block "end"
+	| "if" condition_head "then" block {"elseif" condition_head "then" block} ["else" block] "end"
+	| function_call
+	| vardefinition "=" set_statement
+	| vardefinition
+	| identifier "=" set_statement ;
+
+function_definition = "function" identifier "(" [parameters] ")" ["->" datatype] block ["return" return_statement ";"] "end;" ;
+function_call = "execute" identifier "(" [arguments] ")" ;
+parameters = vardefinition {"," vardefinition} ;
+arguments = argument {"," argument} ;
+argument = condition | expression ;
+
+vardefinition = datatype identifier ;
+datatype = /[a-z]+/ ;
+identifier = /[a-zA-Z]+/ ;
+
+condition = expression logical_operators expression ;
+expression = ["+" | "-"] term {("+" | "-") term} ;
+term = factor {("*" | "/") factor} ;
+factor = "(" expression ")" | function_call | identifier | literal ;
+
+literal = number | string;
+string = ('"' /[a-zA-Z ]+/ '"') ;
+number = /[+-]?([0-9]*[.])?[0-9]+/ ;
+logical_operators = "<=" | ">=" | "<" | ">" | "==" | "!=" ;
+
+set_statement = condition | expression | function_call | identifier | literal ;
+return_statement = condition | expression | identifier | literal ;
+condition_head = condition | identifier | literal ;

@@ -1,3 +1,7 @@
+using InterpreterLib.Interpret;
+using InterpreterLib.Lexer;
+using InterpreterLib.Parser;
+
 namespace InterpreterGUI
 {
     public partial class Form1 : Form
@@ -73,12 +77,55 @@ namespace InterpreterGUI
         private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             saveFileDialog.ShowDialog();
-            File.WriteAllText(openFileDialog.FileName, richTextBoxCode.Text);
+            if (saveFileDialog.FileName.Length != 0)
+            {
+                File.WriteAllText(saveFileDialog.FileName, richTextBoxCode.Text);
+            }
         }
 
         private void RunToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            richTextBoxOutput.Text = "Run";
+            richTextBoxOutput.Clear();
+            richTextBoxLexer.Clear();
+
+            if (richTextBoxCode.Text.Length != 0)
+            {
+                try
+                {
+                    Lexer lexer = new Lexer(richTextBoxCode.Text);
+                    List<Token> tokens = lexer.Tokenize();
+
+                    List<Token> unknownTokens = new List<Token>();
+
+                    foreach (Token token in tokens)
+                    {
+                        if (token.Type == TokenType.Unknown)
+                        {
+                            unknownTokens.Add(token);
+                        }
+
+                        string tokenString = string.Format("{0, -5}", token.Line) + " " + string.Format("{0, -20}", token.Type) + " \"" + token.Lexeme + "\"";
+                        richTextBoxLexer.Text += tokenString + '\n';
+                    }
+
+                    if (unknownTokens.Count == 0)
+                    {
+                        Parser parser = new Parser(tokens);
+                        InterpreterLib.AST.Program program = parser.Parse();
+                        Interpreter interpreter = new Interpreter(program);
+                        List<string> output = interpreter.Interpret();
+
+                        foreach (string item in output)
+                        {
+                            richTextBoxOutput.Text += item + '\n';
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    richTextBoxOutput.Text = ex.Message;
+                }
+            }
         }
 
         private void RichTextBoxCode_TextChanged(object sender, EventArgs e)

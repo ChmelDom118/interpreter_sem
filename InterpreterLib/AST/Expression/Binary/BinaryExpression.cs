@@ -1,14 +1,14 @@
 ﻿namespace InterpreterLib.AST
 {
-    public class BinaryExpression : Expression
+    public abstract class BinaryExpression : Expression
     {
-        protected Expression left;
-        protected Expression right;
+        protected Expression LeftExpression;
+        protected Expression RightExpression;
 
         public BinaryExpression(Expression left, Expression right)
         {
-            this.left = left;
-            this.right = right;
+            LeftExpression = left;
+            RightExpression = right;
         }
     }
 }

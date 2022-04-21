@@ -2,13 +2,13 @@
 {
     public abstract class BinaryRelCondition : Condition
     {
-        protected Expression left;
-        protected Expression right;
+        protected Expression LeftExpression;
+        protected Expression RightExpression;
 
         public BinaryRelCondition(Expression left, Expression right)
         {
-            this.left = left;
-            this.right = right;
+            LeftExpression = left;
+            RightExpression = right;
         }
     }
 }

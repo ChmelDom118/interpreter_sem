@@ -1,0 +1,11 @@
+begin:
+ int op = 0;
+ repeat
+  op = execute read();
+  if op == 1 then
+   execute taskOne();
+  elseif op == 2 then
+   execute taskTwo();
+  end;
+ until op != 0 end;
+end;

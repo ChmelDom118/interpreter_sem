@@ -5,13 +5,13 @@ namespace InterpreterLib.Parser
 {
     public class Parser
     {
-        private List<Token> _tokens;
-        private int _pointer;
+        private List<Token> tokens;
+        private int pointer;
 
         public Parser(List<Token> tokens)
         {
-            _tokens = tokens;
-            _pointer = 0;
+            this.tokens = tokens;
+            pointer = 0;
         }
 
         public Program Parse()
@@ -107,10 +107,20 @@ namespace InterpreterLib.Parser
                     TokenType.GreaterThan,
                     TokenType.GreaterThanOrEqualTo
                 );
-                Consume(TokenType.Semicolon);
-                returnArgument = isCondition
-                    ? new Argument(ReadCondition(expression))
-                    : new Argument(expression);
+
+                switch (isCondition)
+                {
+                    case true:
+
+                        returnArgument = new Argument(ReadCondition(expression));
+                        Consume(TokenType.Semicolon);
+                        break;
+                    case false:
+
+                        Consume(TokenType.Semicolon);
+                        returnArgument = new Argument(expression);
+                        break;
+                }
             }
 
             Consume(TokenType.Keyword, "end");
@@ -144,7 +154,7 @@ namespace InterpreterLib.Parser
                 "double" => new Parameter(DataType.Double, identifierToken.Lexeme),
                 "string" => new Parameter(DataType.String, identifierToken.Lexeme),
                 "boolean" => new Parameter(DataType.Boolean, identifierToken.Lexeme),
-                _ => throw new Exception("Not a valid datatype."),
+                _ => throw new Exception("Parser: Not a valid datatype."),
             };
         }
 
@@ -190,7 +200,7 @@ namespace InterpreterLib.Parser
                     case "for": return ReadForStatement();
                     case "if": return ReadIfStatement();
                     case "execute": return ReadFunctionCallStatement();
-                    default: throw new Exception("Invalid statement.");
+                    default: throw new Exception("Parser: Invalid statement. Looking for one of these: {while, repeat, for, if, execute}.");
                 }
             }
             else if (Match(TokenType.Datatype, TokenType.Identifier))
@@ -199,7 +209,7 @@ namespace InterpreterLib.Parser
             }
             else
             {
-                throw new Exception("Invalid statement.");
+                throw new Exception("Parser: Invalid statement. Looking for one of tehse: {while, repeat, for, if, execute}.");
             }
         }
 
@@ -340,10 +350,19 @@ namespace InterpreterLib.Parser
                         TokenType.GreaterThan,
                         TokenType.GreaterThanOrEqualTo
                     );
-                    Consume(TokenType.Semicolon);
-                    return isCondition
-                        ? new AssignStatement(dataType, identifierToken.Lexeme, ReadCondition(expression))
-                        : new AssignStatement(dataType, identifierToken.Lexeme, null, expression);
+
+                    switch (isCondition)
+                    {
+                        case true:
+
+                            AssignStatement assigmentStatement = new AssignStatement(dataType, identifierToken.Lexeme, ReadCondition(expression));
+                            Consume(TokenType.Semicolon);
+                            return assigmentStatement;
+                        case false:
+
+                            Consume(TokenType.Semicolon);
+                            return new AssignStatement(dataType, identifierToken.Lexeme, null, expression);
+                    }
                 }
                 else
                 {
@@ -364,10 +383,19 @@ namespace InterpreterLib.Parser
                     TokenType.GreaterThan,
                     TokenType.GreaterThanOrEqualTo
                 );
-                Consume(TokenType.Semicolon);
-                return isCondition
-                    ? new AssignStatement(null, identifierToken.Lexeme, ReadCondition(expression))
-                    : new AssignStatement(null, identifierToken.Lexeme, null, expression);
+
+                switch (isCondition)
+                {
+                    case true:
+
+                        AssignStatement assigmentStatement = new AssignStatement(null, identifierToken.Lexeme, ReadCondition(expression));
+                        Consume(TokenType.Semicolon);
+                        return assigmentStatement;
+                    case false:
+
+                        Consume(TokenType.Semicolon);
+                        return new AssignStatement(null, identifierToken.Lexeme, null, expression);
+                }
             }
         }
 
@@ -391,23 +419,13 @@ namespace InterpreterLib.Parser
                 switch (token.Type)
                 { 
                     case TokenType.Literal:
-                        bool value = false;
-                        switch (token.Lexeme) 
-                        {
-                            case "true":
-                                value = true;
-                                break;
-                            case "false":
-                                value = false;
-                                break;
-                            default:
-                                throw new Exception("Expecting one of following (true, false).");
-                        }
-                        return new LiteralCondition(value);
+
+                        return new LiteralCondition(token.Lexeme);
                     case TokenType.Identifier:
+
                         return new IdentCondition(token.Lexeme);
                     default:
-                        throw new Exception("Invalid single value condition. Expecting identifier or boolean literal.");
+                        throw new Exception("Parser: Invalid single value condition. Expecting identifier or boolean literal.");
                 }
             }
             else
@@ -424,7 +442,7 @@ namespace InterpreterLib.Parser
                     TokenType.LessThanOrEqualTo => new LessEqualCondition(left, right),
                     TokenType.GreaterThan => new GreaterCondition(left, right),
                     TokenType.GreaterThanOrEqualTo => new GreaterEqualCondition(left, right),
-                    _ => throw new Exception("Invalid condition")
+                    _ => throw new Exception("Parser: invalid condition.")
                 };
             }
         }
@@ -511,59 +529,46 @@ namespace InterpreterLib.Parser
             else if (Match(TokenType.Literal))
             {
                 Token literalToken = ReadToken();
-
-                double doubleValue;
-                bool success = double.TryParse(literalToken.Lexeme, out doubleValue);
-                if (success) return new DoubleLiteralExpression(doubleValue);
-
-                int integerValue;
-                success = int.TryParse(literalToken.Lexeme, out integerValue);
-                if (success) return new IntegerLiteralExpression(integerValue);
-
-                bool booleanValue;
-                success = bool.TryParse(literalToken.Lexeme, out booleanValue);
-                if (success) return new BoolLiteralExpression(booleanValue);
-
-                return new StringLiteralExpression(literalToken.Lexeme);
+                return new LiteralExpression(literalToken.Lexeme);
             }
 
-            throw new Exception("Invalid factor.");
+            throw new Exception("Parser: invalid factor.");
         }
 
         private Token PeekToken()
         {
-            return _tokens[_pointer];
+            return tokens[pointer];
         }
 
         private Token ReadToken()
         {
-            return _tokens[_pointer++];
+            return tokens[pointer++];
         }
 
         private Token CheckedReadToken(TokenType expectedType)
         {
             Token token = ReadToken();
-            if (token.Type != expectedType) throw new Exception($"Expected \"{expectedType}\" token.");
+            if (token.Type != expectedType) throw new Exception($"Parser: Expected \"{expectedType}\" token.");
             return token;
         }
 
         private Token CheckedReadToken(TokenType expectedType, string lexeme)
         {
             Token token = ReadToken();
-            if (token.Type != expectedType || token.Lexeme != lexeme) throw new Exception($"Expected \"{expectedType}\" token.");
+            if (token.Type != expectedType || token.Lexeme != lexeme) throw new Exception($"Parser: Expected \"{expectedType}\" token with value of \"{lexeme}\" but value is \"{token.Lexeme}\".");
             return token;
         }
 
         private void Consume(TokenType tokenType)
         {
             Token token = ReadToken();
-            if (token.Type != tokenType) throw new Exception($"Expected \"{tokenType}\" token.");
+            if (token.Type != tokenType) throw new Exception($"Parser: Expected \"{tokenType}\" token.");
         }
 
         private void Consume(TokenType tokenType, string lexeme)
         {
             Token token = ReadToken();
-            if (token.Type != tokenType || (token.Type == tokenType && token.Lexeme != lexeme)) throw new Exception($"Expected \"{tokenType}\" token.");
+            if (token.Type != tokenType || (token.Type == tokenType && token.Lexeme != lexeme)) throw new Exception($"Parser: Expected \"{tokenType}\" token with value of \"{lexeme}\" but value is \"{token.Lexeme}\".");
         }
 
         private bool Match(params TokenType[] tokenTypes)
@@ -580,7 +585,7 @@ namespace InterpreterLib.Parser
 
         private bool Match(int offset, params TokenType[] tokenTypes)
         {
-            Token token = _tokens[_pointer + offset];
+            Token token = tokens[pointer + offset];
 
             foreach (TokenType tokenType in tokenTypes)
             {

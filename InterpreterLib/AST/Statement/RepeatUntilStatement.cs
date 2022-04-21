@@ -1,4 +1,6 @@
-﻿namespace InterpreterLib.AST
+﻿using InterpreterLib.Interpret;
+
+namespace InterpreterLib.AST
 {
     public class RepeatUntilStatement : Statement
     {
@@ -9,6 +11,25 @@
         {
             Condition = condition;
             Block = block;
+        }
+
+        public override void Execute(Interpreter interpret)
+        {
+            if (Condition.Evaluate(interpret) is VarBool conditionResult)
+            {
+                foreach (Statement statement in Block.Statements)
+                {
+                    statement.Execute(interpret);
+                }
+
+                while (conditionResult.Value == true)
+                {
+                    foreach (Statement statement in Block.Statements)
+                    {
+                        statement.Execute(interpret);
+                    }
+                }
+            }
         }
     }
 }

@@ -2,11 +2,11 @@
 {
     public class Function
     {
-        public string Identifier { get; private set; }
-        public List<Parameter> Parameters { get; private set; }
-        public Block Block { get; private set; }
-        public DataType? DataType { get; private set; }
-        public Argument? ReturnArgument { get; private set; }
+        public string Identifier { get; }
+        public List<Parameter> Parameters { get; }
+        public Block Block { get; }
+        public DataType? DataType { get; protected set; }
+        public Argument? ReturnArgument { get; }
 
         public Function(string identifier, List<Parameter> parameters, Block block, DataType? dataType = null, Argument? returnArgument = null)
         {

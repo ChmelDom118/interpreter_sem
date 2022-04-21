@@ -9,6 +9,11 @@
             Statements = new List<Statement>();
         }
 
+        public Block(List<Statement> statements)
+        {
+            Statements = statements;
+        }
+
         public void AddStatements(params Statement[] statements)
         {
             Statements.AddRange(statements);

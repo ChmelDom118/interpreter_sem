@@ -2,11 +2,11 @@
 
 namespace InterpreterLib.AST
 {
-    public class IdentCondition : Condition
+    public class IdentExpression : Expression
     {
         public string Identifier { get; private set; }
-        
-        public IdentCondition(string identifier)
+
+        public IdentExpression(string identifier)
         {
             Identifier = identifier;
         }
@@ -14,8 +14,7 @@ namespace InterpreterLib.AST
         public override Var Evaluate(Interpreter interpret)
         {
             Var? var = interpret.CurrentContext.Variables.Get(Identifier);
-            if (var == null) throw new Exception("IdentCondition: variable does not exists.");
-            if (var is not VarBool) throw new Exception("IdentCondition: variable must be type of bool.");
+            if (var == null) throw new Exception("IdentExpression: variable does not exists.");
             return var;
         }
     }

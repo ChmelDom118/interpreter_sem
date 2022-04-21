@@ -1,4 +1,6 @@
-﻿namespace InterpreterLib.AST
+﻿using InterpreterLib.Interpret;
+
+namespace InterpreterLib.AST
 {
     public class FunctionCallStatement : Statement
     {
@@ -9,6 +11,11 @@
         {
             Identifier = identifier;
             Arguments = arguments;
+        }
+
+        public override void Execute(Interpreter interpter)
+        {
+            interpter.CallFunction(Identifier, Arguments);
         }
     }
 }

@@ -1,0 +1,15 @@
+declare:
+ function toggle(boolean b) -> boolean
+  return b != b;
+ end;
+begin:
+ boolean value = false;
+ while true do
+  value = execute toggle(value);
+  if value then
+   execute isTrue();
+  else
+   execute isFalse();
+  end;
+ end;
+end;

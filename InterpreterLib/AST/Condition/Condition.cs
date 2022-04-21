@@ -1,4 +1,9 @@
-﻿namespace InterpreterLib.AST
+﻿using InterpreterLib.Interpret;
+
+namespace InterpreterLib.AST
 {
-    public abstract class Condition { }
+    public abstract class Condition 
+    {
+        public abstract Var Evaluate(Interpreter interpret);
+    }
 }
